@@ -8,13 +8,11 @@ use Yii;
  * This is the model class for table "ent_almacenes".
  *
  * @property integer $id_almacen
- * @property integer $id_sitio
+ * @property string $uddi
  * @property string $txt_nombre
- * @property string $txt_clave
- * @property integer $b_habilitado
  *
- * @property EntSitios $idSitio
- * @property WrkStock[] $wrkStocks
+ * @property RelEnviosAlmacenes[] $relEnviosAlmacenes
+ * @property EntEnvios[] $idEnvios
  */
 class EntAlmacenes extends \yii\db\ActiveRecord
 {
@@ -32,11 +30,8 @@ class EntAlmacenes extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['id_sitio', 'txt_nombre', 'txt_clave'], 'required'],
-            [['id_sitio', 'b_habilitado'], 'integer'],
-            [['txt_nombre'], 'string', 'max' => 45],
-            [['txt_clave'], 'string', 'max' => 5],
-            [['id_sitio'], 'exist', 'skipOnError' => true, 'targetClass' => EntSitios::className(), 'targetAttribute' => ['id_sitio' => 'id_sitio']],
+            [['uddi', 'txt_nombre'], 'required'],
+            [['uddi', 'txt_nombre'], 'string', 'max' => 45],
         ];
     }
 
@@ -47,26 +42,24 @@ class EntAlmacenes extends \yii\db\ActiveRecord
     {
         return [
             'id_almacen' => 'Id Almacen',
-            'id_sitio' => 'Id Sitio',
+            'uddi' => 'Uddi',
             'txt_nombre' => 'Txt Nombre',
-            'txt_clave' => 'Txt Clave',
-            'b_habilitado' => 'B Habilitado',
         ];
     }
 
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getIdSitio()
+    public function getRelEnviosAlmacenes()
     {
-        return $this->hasOne(EntSitios::className(), ['id_sitio' => 'id_sitio']);
+        return $this->hasMany(RelEnviosAlmacenes::className(), ['id_almacen' => 'id_almacen']);
     }
 
     /**
      * @return \yii\db\ActiveQuery
      */
-    public function getWrkStocks()
+    public function getIdEnvios()
     {
-        return $this->hasMany(WrkStock::className(), ['id_almacen' => 'id_almacen']);
+        return $this->hasMany(EntEnvios::className(), ['id_envio' => 'id_envio'])->viaTable('rel_envios_almacenes', ['id_almacen' => 'id_almacen']);
     }
 }
