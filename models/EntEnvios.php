@@ -13,17 +13,22 @@ use Yii;
  * @property integer $id_direccion_remitente
  * @property integer $id_direccion_destino
  * @property integer $id_candado
+ * @property integer $id_plataforma
  * @property integer $num_intento_entrega
  * @property integer $b_retornado_centro_distribucion
  * @property integer $b_rechazado_cliente
  * @property integer $b_retornado_origen
  * @property string $txt_remitente
  * @property string $txt_destinatario
+ * @property string $txt_token_transaccion_plataforma
+ * @property integer $envio_data
+ * @property string $fch_creacion
  *
  * @property CatEnviosEstados $idEnvioEstado
  * @property EntDirecciones $idDireccionDestino
  * @property EntDirecciones $idDireccionRemitente
  * @property EntCandados $idCandado
+ * @property EntPlataformas $idPlataforma
  * @property RelEnviosAlmacenes[] $relEnviosAlmacenes
  * @property EntAlmacenes[] $idAlmacens
  * @property RelEnviosAtributos[] $relEnviosAtributos
@@ -48,13 +53,15 @@ class EntEnvios extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['id_envio_estado', 'id_direccion_destino', 'txt_remitente', 'txt_destinatario'], 'required'],
-            [['id_envio_estado', 'id_direccion_remitente', 'id_direccion_destino', 'id_candado', 'num_intento_entrega', 'b_retornado_centro_distribucion', 'b_rechazado_cliente', 'b_retornado_origen'], 'integer'],
-            [['uddi', 'txt_remitente', 'txt_destinatario'], 'string', 'max' => 45],
+            [['id_envio_estado', 'id_direccion_destino', 'id_plataforma', 'txt_remitente', 'txt_destinatario', 'txt_token_transaccion_plataforma'], 'required'],
+            [['id_envio_estado', 'id_direccion_remitente', 'id_direccion_destino', 'id_candado', 'id_plataforma', 'num_intento_entrega', 'b_retornado_centro_distribucion', 'b_rechazado_cliente', 'b_retornado_origen', 'envio_data'], 'integer'],
+            [['fch_creacion'], 'safe'],
+            [['uddi', 'txt_remitente', 'txt_destinatario', 'txt_token_transaccion_plataforma'], 'string', 'max' => 45],
             [['id_envio_estado'], 'exist', 'skipOnError' => true, 'targetClass' => CatEnviosEstados::className(), 'targetAttribute' => ['id_envio_estado' => 'id_envio_estado']],
             [['id_direccion_destino'], 'exist', 'skipOnError' => true, 'targetClass' => EntDirecciones::className(), 'targetAttribute' => ['id_direccion_destino' => 'id_direccion']],
             [['id_direccion_remitente'], 'exist', 'skipOnError' => true, 'targetClass' => EntDirecciones::className(), 'targetAttribute' => ['id_direccion_remitente' => 'id_direccion']],
             [['id_candado'], 'exist', 'skipOnError' => true, 'targetClass' => EntCandados::className(), 'targetAttribute' => ['id_candado' => 'id_candado']],
+            [['id_plataforma'], 'exist', 'skipOnError' => true, 'targetClass' => EntPlataformas::className(), 'targetAttribute' => ['id_plataforma' => 'id_plataforma']],
         ];
     }
 
@@ -70,12 +77,16 @@ class EntEnvios extends \yii\db\ActiveRecord
             'id_direccion_remitente' => 'Id Direccion Remitente',
             'id_direccion_destino' => 'Id Direccion Destino',
             'id_candado' => 'Id Candado',
+            'id_plataforma' => 'Id Plataforma',
             'num_intento_entrega' => 'Num Intento Entrega',
             'b_retornado_centro_distribucion' => 'B Retornado Centro Distribucion',
             'b_rechazado_cliente' => 'B Rechazado Cliente',
             'b_retornado_origen' => 'B Retornado Origen',
             'txt_remitente' => 'Txt Remitente',
             'txt_destinatario' => 'Txt Destinatario',
+            'txt_token_transaccion_plataforma' => 'Txt Token Transaccion Plataforma',
+            'envio_data' => 'Envio Data',
+            'fch_creacion' => 'Fch Creacion',
         ];
     }
 
@@ -109,6 +120,14 @@ class EntEnvios extends \yii\db\ActiveRecord
     public function getIdCandado()
     {
         return $this->hasOne(EntCandados::className(), ['id_candado' => 'id_candado']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getIdPlataforma()
+    {
+        return $this->hasOne(EntPlataformas::className(), ['id_plataforma' => 'id_plataforma']);
     }
 
     /**
