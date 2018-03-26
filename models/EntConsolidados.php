@@ -10,6 +10,7 @@ use Yii;
  * @property integer $id_consolidado
  * @property integer $id_tipo_consolidado
  * @property string $uddi
+ * @property string $txt_nombre
  * @property string $fch_creacion
  *
  * @property CatTiposConsolidados $idTipoConsolidado
@@ -34,10 +35,10 @@ class EntConsolidados extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['id_tipo_consolidado'], 'required'],
+            [['id_tipo_consolidado', 'txt_nombre'], 'required'],
             [['id_tipo_consolidado'], 'integer'],
             [['fch_creacion'], 'safe'],
-            [['uddi'], 'string', 'max' => 45],
+            [['uddi', 'txt_nombre'], 'string', 'max' => 45],
             [['id_tipo_consolidado'], 'exist', 'skipOnError' => true, 'targetClass' => CatTiposConsolidados::className(), 'targetAttribute' => ['id_tipo_consolidado' => 'id_tipo_consolidado']],
         ];
     }
@@ -51,6 +52,7 @@ class EntConsolidados extends \yii\db\ActiveRecord
             'id_consolidado' => 'Id Consolidado',
             'id_tipo_consolidado' => 'Id Tipo Consolidado',
             'uddi' => 'Uddi',
+            'txt_nombre' => 'Txt Nombre',
             'fch_creacion' => 'Fch Creacion',
         ];
     }

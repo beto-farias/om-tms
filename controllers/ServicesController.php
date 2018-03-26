@@ -9,11 +9,13 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 use app\components\AccessControlExtend;
 use yii\helpers\Json;
+use yii\db\Transaction;
 
 use app\models\ServiceResponse;
 use app\models\EntEnvios;
 use app\models\EntDirecciones;
 use app\models\Entplataformas;
+use app\models\WrkEnviosEventos;
 
 
 class ServicesController extends \yii\rest\Controller
@@ -153,7 +155,36 @@ class ServicesController extends \yii\rest\Controller
         $shipment->txt_token_transaccion_plataforma = $json->transaccion;
         $shipment->id_plataforma = $plataforma->id_plataforma;
 
-        $shipment->save();
+
+
+        //crea la transaccion
+        $transaction = Yii::$app->db->beginTransaction(
+            Transaction::SERIALIZABLE
+        );
+
+        try {
+
+            //guarda el registro
+            if(!$shipment->save()){
+                throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+            }
+            
+            //Crea el evento
+            if(!self::addEnvioEvento($shipment, self::ENVIO_ESTADO_INFO_RECIBIDA, "")){
+                throw new \Exception("Error al generar el evento");
+            }
+
+            $transaction->commit();
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+
+            $response = new ServiceResponse();
+            $response->responseCode = -1;
+            $response->message = $e->getMessage();
+            $response->data = $e;
+
+            return $response;
+        }
 
         //carga las direcciones
         $shipment->id_direccion_remitente = $shipment->idDireccionRemitente;
@@ -167,10 +198,19 @@ class ServicesController extends \yii\rest\Controller
         $response->message = "Envio recibido";
         $response->data = $shipment;
         
-        return $response;
+        return $response;  
     }
 
     const ENVIO_ESTADO_INFO_RECIBIDA = 1;
+
+    private function addEnvioEvento($envio, $estatus, $notas){
+        $evento = new WrkEnviosEventos();
+        $evento->id_envio = $envio->id_envio;
+        $evento->id_envio_estado = $estatus;
+        $evento->txt_notas = $notas;
+
+        return($evento->save());
+    }
 
     //-------------------- UTILIDADES -----------------------------
   
@@ -227,6 +267,17 @@ class ServicesController extends \yii\rest\Controller
             return $error;
         }
         
+    }
+
+    /**
+     * Toma los errores del modelo y los pone como String
+     */
+    private function getModelErrorsAsString($error){
+        $errors = "";
+            foreach($error->errors as $item){
+                $errors .=  $item[0] . ", ";
+            }  
+        return $errors;
     }
 
     private function validateRequiredParam($response, $isSet, $atributoName){

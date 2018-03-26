@@ -9,6 +9,8 @@ use yii\web\Response;
 use yii\filters\VerbFilter;
 
 use app\models\EntEnvios;
+use app\models\EntConsolidados;
+use app\models\RelEnviosConsolidados;
 
 class TmsAdminController extends Controller
 {
@@ -23,13 +25,43 @@ class TmsAdminController extends Controller
     {
         //Carga los envios
         $shipments = EntEnvios::find()->all();
-        return $this->render('envios_list',['shipments'=>$shipments]);
+        $consolidados = EntConsolidados::find()->all();
+        return $this->render('envios_list',['shipments'=>$shipments, 'consolidados'=>$consolidados]);
     }
 
     public function actionEnvioDetalles($uddi){
          $shipment = EntEnvios::find()->where(['uddi'=>$uddi])->one();
          return $this->render('envio_detalles',['shipment'=>$shipment]);
     }
+
+    public function actionProcesar(){
+        print_r($_POST);
+        $shipments = $_POST['shipment'];
+        
+
+        //TODO mover la funcion a una externa para swichear de acuerdo a la accion
+        $model = new EntConsolidados();
+        $model->uddi = uniqid("consolidado-");
+        $model->txt_nombre = Yii::$app->request->post()['nombre'];
+        $model->id_tipo_consolidado = 1;
+        if ($model->save()) {
+
+            //Relaciona los envios con el consolidado
+            foreach($shipments as $item){
+                $shipment = $this->getEnvioByUDDI($item);
+                $rel = new RelEnviosConsolidados();
+                $rel->id_envio = $shipment->id_envio;
+                $rel->id_consolidado = $model->id_consolidado;
+                $rel->save();
+
+            }
+
+            return $this->redirect(['envios-list']);
+        } 
+    }
+
+
+   
 
     /**
      * Logout action.
@@ -51,6 +83,10 @@ class TmsAdminController extends Controller
     }
 
     
+
+    private function getEnvioByUDDI($uddi){
+        return  EntEnvios::find()->where(['uddi'=>$uddi])->one();
+    }
 
     
 }
