@@ -24,6 +24,8 @@ class ServicesController extends \yii\rest\Controller
     public $enableCsrfValidation = false;
     public $layout = null;
 
+    const ENVIO_ESTADO_INFO_RECIBIDA = 1;
+
 
     public function behaviors()
     {
@@ -201,7 +203,7 @@ class ServicesController extends \yii\rest\Controller
         return $response;  
     }
 
-    const ENVIO_ESTADO_INFO_RECIBIDA = 1;
+    
 
     private function addEnvioEvento($envio, $estatus, $notas){
         $evento = new WrkEnviosEventos();
