@@ -26,10 +26,14 @@ class TmsAdminController extends Controller
    
     const CONSOLIDADO_ESTADO_EN_PREPARACION = 1;
     const CONSOLIDADO_ESTADO_CONSOLIDADO = 2;
+    const CONSOLIDADO_ESTADO_TRANSITO = 3;
+    const CONSOLIDADO_ESTADO_ARRIBO = 4;
 
     const ENVIO_ESTADO_ENTRADA_ALMACEN = 6;
+    const ENVIO_ESTADO_SALIDA_ALMACEN = 5;
 
     const ALMACEN_EVENTO_ARRIBO = 1;
+    const ALMACEN_EVENTO_SALIDA = 2;
 
     /**
      * Displays homepage.
@@ -123,9 +127,52 @@ class TmsAdminController extends Controller
 
         $accion = $_POST['action'];
         if($accion == 'close-consolidado'){
-            $consolidados = $_POST['consolidado'];
 
-            
+            $this->cerrarConsolidado();
+
+        }else if($accion == 'transito-consolidado'){
+
+            $this->transitoConsolidado();
+
+        }else if($accion == 'arribo-consolidado'){
+
+            $this->arriboConsolidado();
+
+        }
+
+        
+    }
+
+   
+
+    /**
+     * Logout action.
+     *
+     * @return Response
+     */
+    public function actionLogout()
+    {
+        Yii::$app->user->logout();
+
+        return $this->goHome();
+    }
+
+    public function actionConstruccion(){
+
+        $this->layout = "classic/topBar/mainBlank";
+
+        return $this->render("construccion");
+    }
+
+
+//------------------- FUNCIONES DE NEGOCIO ---------------
+
+
+    /**
+     * Crea el consolidado
+     */
+    private function cerrarConsolidado(){
+        $consolidados = $_POST['consolidado']; 
             //crea la transaccion
             $transaction = Yii::$app->db->beginTransaction(
                 Transaction::SERIALIZABLE
@@ -155,43 +202,135 @@ class TmsAdminController extends Controller
 
             $transaction->commit();
             return $this->redirect(['envios-list']);
-        }
     }
 
-   
+
 
     /**
-     * Logout action.
-     *
-     * @return Response
+     * Pone en transito el consolidado
      */
-    public function actionLogout()
-    {
-        Yii::$app->user->logout();
+    private function transitoConsolidado(){
+        $consolidados = $_POST['consolidado']; 
+            //crea la transaccion
+            $transaction = Yii::$app->db->beginTransaction(
+                Transaction::SERIALIZABLE
+            );
+            try{
+                foreach($consolidados as $item){
+                    //Actualiza el estado en el consolidado
+                    $consolidado = $this->getConsolidadoByUDDI($item);
+                    $consolidado->id_consolidado_estado = self::CONSOLIDADO_ESTADO_TRANSITO;
+                    if(!$consolidado->save()){
+                        throw new \Exception(self::getModelErrorsAsString($consolidado->errors));
+                    }
 
-        return $this->goHome();
+                    //Agrega el evento al consolidado
+                    $this->createConsolidadoEvento($consolidado->id_consolidado, self::CONSOLIDADO_ESTADO_TRANSITO);
+                
+
+                    //----- Indica en el almacen que el envio salio -----
+                    // 1 Carga los items que estan en el consolidado
+                    $shipments = RelEnviosConsolidados::find()->where(['id_consolidado'=>$consolidado->id_consolidado])->all();
+
+                    foreach($shipments as $rel){
+                    //$idAlmacen, $idEnvio, $idEvento
+                        $shipment = $rel->idEnvio;
+                        $this->createAlmacenEvento($shipment->id_almacen,$shipment->id_envio, self::ALMACEN_EVENTO_SALIDA);
+
+                        $shipment->id_envio_estado = self::ENVIO_ESTADO_SALIDA_ALMACEN;
+                        //Remueve el id del almacen
+                        $shipment->id_almacen = null;
+                        if(!$shipment->save()){
+                            throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                        }
+                    }
+
+                }
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                print_r($e);
+                return $this->redirect(['envios-list']);
+            }
+
+            $transaction->commit();
+            return $this->redirect(['envios-list']);
     }
 
-    public function actionConstruccion(){
 
-        $this->layout = "classic/topBar/mainBlank";
+    private function arriboConsolidado(){
+        $consolidados = $_POST['consolidado']; 
+            //crea la transaccion
+            $transaction = Yii::$app->db->beginTransaction(
+                Transaction::SERIALIZABLE
+            );
+            try{
+                foreach($consolidados as $item){
+                    //Actualiza el estado en el consolidado
+                    $consolidado = $this->getConsolidadoByUDDI($item);
+                    $consolidado->id_consolidado_estado = self::CONSOLIDADO_ESTADO_ARRIBO;
+                    
+                    if(!$consolidado->save()){
+                        throw new \Exception(self::getModelErrorsAsString($consolidado->errors));
+                    }
 
-        return $this->render("construccion");
+                    //Obtiene el id del almacen destino del consolidado
+                    $idAlmacenDestino = $consolidado->id_almacen_destino;
+
+                    //Agrega el evento al consolidado
+                    $this->createConsolidadoEvento($consolidado->id_consolidado, self::CONSOLIDADO_ESTADO_ARRIBO);
+                
+
+                    //----- Indica en el almacen que el envio llego -----
+                    // 1 Carga los items que estan en el consolidado
+                    $shipments = RelEnviosConsolidados::find()->where(['id_consolidado'=>$consolidado->id_consolidado])->all();
+
+                    foreach($shipments as $rel){
+                        $shipment = $rel->idEnvio;
+                        //Crea el evento del almacen que el envio llego
+                        $this->createAlmacenEvento($idAlmacenDestino,$shipment->id_envio, self::ALMACEN_EVENTO_ARRIBO);
+
+                        //Actualiza el envio
+                        $shipment->id_envio_estado = self::ENVIO_ESTADO_ENTRADA_ALMACEN;
+                        //Asigna el id del almacen
+                        $shipment->id_almacen = $idAlmacenDestino;
+                        //Remueve el id del consolidado
+                        $shipment->id_consolidado = null;
+                        if(!$shipment->save()){
+                            throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                        }
+                    }
+
+                }
+            } catch (\Exception $e) {
+                $transaction->rollBack();
+                print_r($e);
+                return $this->redirect(['envios-list']);
+            }
+
+            $transaction->commit();
+            return $this->redirect(['envios-list']);
     }
 
 
-//------------------- FUNCIONES DE NEGOCIO ---------------
-
+    /**
+     * 
+     */
     private function procesarNuevoConsolidado(){
         $shipments = $_POST['shipment'];
+        $almacenOrigen = $_POST['almacen'];
+        $almacenOrigen = $this->getAlmacenByUDDI($almacenOrigen);
+
+        $almacenDestino = $_POST['almacen_destino'];
+        $almacenDestino = $this->getAlmacenByUDDI($almacenDestino);
+
         //TODO mover la funcion a una externa para swichear de acuerdo a la accion
         $model = new EntConsolidados();
         $model->uddi = uniqid("consolidado-");
         $model->txt_nombre = Yii::$app->request->post()['nombre'];
         $model->id_tipo_consolidado = 1;
         $model->id_consolidado_estado = self::CONSOLIDADO_ESTADO_EN_PREPARACION;
-        $model->id_almacen_origen = 1;
-        $model->id_almacen_destino = 1;
+        $model->id_almacen_origen = $almacenOrigen->id_almacen;;
+        $model->id_almacen_destino = $almacenDestino->id_almacen;;
 
         //crea la transaccion
         $transaction = Yii::$app->db->beginTransaction(
@@ -213,6 +352,14 @@ class TmsAdminController extends Controller
                 //Relaciona los envios con el consolidado
                 foreach($shipments as $item){
                     $shipment = $this->getEnvioByUDDI($item);
+                    $shipment->id_consolidado = $model->id_consolidado; //Asigna al envio el consolidado
+
+                    //Guarda la actualizacion
+                    if(!$shipment->save()){
+                        throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                    }
+
+
                     $rel = new RelEnviosConsolidados();
                     $rel->id_envio = $shipment->id_envio;
                     $rel->id_consolidado = $model->id_consolidado;
@@ -234,6 +381,9 @@ class TmsAdminController extends Controller
     }
 
 
+    /**
+     * Recibir un envio ---
+     */
     private function recibirShipment(){
         $shipments = $_POST['shipment'];
             $almacen = $_POST['almacen'];
@@ -248,8 +398,12 @@ class TmsAdminController extends Controller
                 //Relaciona los envios con el consolidado
                 foreach($shipments as $item){
                     $shipment = $this->getEnvioByUDDI($item);
-
+                    $shipment->id_almacen = $almacen->id_almacen; //Indica el almacen del produto
                     
+                    //Guarda la actualizacion
+                    if(!$shipment->save()){
+                        throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                    }
 
                     //Crea el evento del envio
                     $this->createEnvioEvento($shipment->id_envio, self::ENVIO_ESTADO_ENTRADA_ALMACEN);
@@ -275,40 +429,57 @@ class TmsAdminController extends Controller
     }
 
     /**
-     * 
+     * Agrega los envios a un consolidado
      */
     private function procesarAgregarConsolidado(){
         $shipments = $_POST['shipment'];
-            $consolidado = $_POST['consolidado'];
-            $consolidado = $this->getConsolidadoByUDDI($consolidado);
+        $consolidado = $_POST['consolidado'];
+        $consolidado = $this->getConsolidadoByUDDI($consolidado);
 
-            //crea la transaccion
-            $transaction = Yii::$app->db->beginTransaction(
-                Transaction::SERIALIZABLE
-            );
-            try{
-                //Relaciona los envios con el consolidado
-                foreach($shipments as $item){
-                    $shipment = $this->getEnvioByUDDI($item);
-                    $rel = new RelEnviosConsolidados();
-                    $rel->id_envio = $shipment->id_envio;
-                    $rel->id_consolidado = $consolidado->id_consolidado;
-                    if(!$rel->save()){
-                        //throw new \Exception(self::getModelErrorsAsString($rel->errors));
-                    }
+        //crea la transaccion
+        $transaction = Yii::$app->db->beginTransaction(
+            Transaction::SERIALIZABLE
+        );
+        try{
+            //Relaciona los envios con el consolidado
+            foreach($shipments as $item){
+                $shipment = $this->getEnvioByUDDI($item);
+                $shipment->id_consolidado = $consolidado->id_consolidado; //Asigna al envio el consolidado
+
+                //Guarda la actualizacion
+                if(!$shipment->save()){
+                    throw new \Exception(self::getModelErrorsAsString($shipment->errors));
                 }
-            } catch (\Exception $e) {
-                $transaction->rollBack();
-                print_r($e);
-                return $this->redirect(['envios-list']);
-            }
 
-            $transaction->commit();
+                $rel = new RelEnviosConsolidados();
+                $rel->id_envio = $shipment->id_envio;
+                $rel->id_consolidado = $consolidado->id_consolidado;
+                if(!$rel->save()){
+                    throw new \Exception(self::getModelErrorsAsString($rel->errors));
+                }
+            }
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            print_r($e);
             return $this->redirect(['envios-list']);
+        }
+
+        $transaction->commit();
+        return $this->redirect(['envios-list']);
     }
 
     
     //-------------- UTILIDADES ---------------------------
+
+
+    private function createConsolidadoEvento($idConsolidado, $idEvento){
+        $evento = new WrkConsolidadosEventos();
+        $evento->id_consolidado = $idConsolidado;
+        $evento->id_consolidado_estado = $idEvento;
+        if(!$evento->save()){
+            throw new \Exception(self::getModelErrorsAsString($evento->errors));
+        }
+    }
 
 
     /**
@@ -339,10 +510,16 @@ class TmsAdminController extends Controller
             $rel->id_almacen = $idAlmacen;
             $rel->id_envio = $idEnvio;
             if(!$rel->save()){
+                print_r($idAlmacen);
+        print_r($idEnvio);
+        print_r($idEvento);
+        print_r(this->getModelErrorsAsString($rel->errors));
+        //print_r($evento->errors);
+        exit;
                 throw new \Exception(self::getModelErrorsAsString($rel->errors));
             }
         }
-
+        
         $evento = new WrkAlmacenesEventos();
         $evento->id_almacen = $idAlmacen;
         $evento->id_envio = $idEnvio;
@@ -350,6 +527,12 @@ class TmsAdminController extends Controller
 
        
         if(!$evento->save()){
+
+        // print_r($idAlmacen);
+        // print_r($idEnvio);
+        // print_r($idEvento);
+        // print_r($evento->errors);
+        // exit;
             throw new \Exception(self::getModelErrorsAsString($evento->errors));
         }
     }
@@ -373,9 +556,9 @@ class TmsAdminController extends Controller
      */
     private function getModelErrorsAsString($error){
         $errors = "";
-            // foreach($error->errors as $item){
-            //     $errors .=  $item[0] . ", ";
-            // }  
+             foreach($error->errors as $item){
+                 $errors .=  $item[0] . ", ";
+             }  
         return $errors;
     }
 

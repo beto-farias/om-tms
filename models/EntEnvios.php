@@ -14,6 +14,8 @@ use Yii;
  * @property integer $id_direccion_destino
  * @property integer $id_candado
  * @property integer $id_plataforma
+ * @property integer $id_almacen
+ * @property integer $id_consolidado
  * @property integer $num_intento_entrega
  * @property integer $b_retornado_centro_distribucion
  * @property integer $b_rechazado_cliente
@@ -27,7 +29,9 @@ use Yii;
  * @property CatEnviosEstados $idEnvioEstado
  * @property EntDirecciones $idDireccionDestino
  * @property EntDirecciones $idDireccionRemitente
+ * @property EntAlmacenes $idAlmacen
  * @property EntCandados $idCandado
+ * @property EntConsolidados $idConsolidado
  * @property EntPlataformas $idPlataforma
  * @property RelEnviosAlmacenes[] $relEnviosAlmacenes
  * @property EntAlmacenes[] $idAlmacens
@@ -54,13 +58,16 @@ class EntEnvios extends \yii\db\ActiveRecord
     {
         return [
             [['id_envio_estado', 'id_direccion_destino', 'id_plataforma', 'txt_remitente', 'txt_destinatario', 'txt_token_transaccion_plataforma'], 'required'],
-            [['id_envio_estado', 'id_direccion_remitente', 'id_direccion_destino', 'id_candado', 'id_plataforma', 'num_intento_entrega', 'b_retornado_centro_distribucion', 'b_rechazado_cliente', 'b_retornado_origen', 'envio_data'], 'integer'],
+            [['id_envio_estado', 'id_direccion_remitente', 'id_direccion_destino', 'id_candado', 'id_plataforma', 'id_almacen', 'id_consolidado', 'num_intento_entrega', 'b_retornado_centro_distribucion', 'b_rechazado_cliente', 'b_retornado_origen', 'envio_data'], 'integer'],
             [['fch_creacion'], 'safe'],
             [['uddi', 'txt_remitente', 'txt_destinatario', 'txt_token_transaccion_plataforma'], 'string', 'max' => 45],
+            [['uddi'], 'unique'],
             [['id_envio_estado'], 'exist', 'skipOnError' => true, 'targetClass' => CatEnviosEstados::className(), 'targetAttribute' => ['id_envio_estado' => 'id_envio_estado']],
             [['id_direccion_destino'], 'exist', 'skipOnError' => true, 'targetClass' => EntDirecciones::className(), 'targetAttribute' => ['id_direccion_destino' => 'id_direccion']],
             [['id_direccion_remitente'], 'exist', 'skipOnError' => true, 'targetClass' => EntDirecciones::className(), 'targetAttribute' => ['id_direccion_remitente' => 'id_direccion']],
+            [['id_almacen'], 'exist', 'skipOnError' => true, 'targetClass' => EntAlmacenes::className(), 'targetAttribute' => ['id_almacen' => 'id_almacen']],
             [['id_candado'], 'exist', 'skipOnError' => true, 'targetClass' => EntCandados::className(), 'targetAttribute' => ['id_candado' => 'id_candado']],
+            [['id_consolidado'], 'exist', 'skipOnError' => true, 'targetClass' => EntConsolidados::className(), 'targetAttribute' => ['id_consolidado' => 'id_consolidado']],
             [['id_plataforma'], 'exist', 'skipOnError' => true, 'targetClass' => EntPlataformas::className(), 'targetAttribute' => ['id_plataforma' => 'id_plataforma']],
         ];
     }
@@ -78,6 +85,8 @@ class EntEnvios extends \yii\db\ActiveRecord
             'id_direccion_destino' => 'Id Direccion Destino',
             'id_candado' => 'Id Candado',
             'id_plataforma' => 'Id Plataforma',
+            'id_almacen' => 'Id Almacen',
+            'id_consolidado' => 'Id Consolidado',
             'num_intento_entrega' => 'Num Intento Entrega',
             'b_retornado_centro_distribucion' => 'B Retornado Centro Distribucion',
             'b_rechazado_cliente' => 'B Rechazado Cliente',
@@ -117,9 +126,25 @@ class EntEnvios extends \yii\db\ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
+    public function getIdAlmacen()
+    {
+        return $this->hasOne(EntAlmacenes::className(), ['id_almacen' => 'id_almacen']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
     public function getIdCandado()
     {
         return $this->hasOne(EntCandados::className(), ['id_candado' => 'id_candado']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
+    public function getIdConsolidado()
+    {
+        return $this->hasOne(EntConsolidados::className(), ['id_consolidado' => 'id_consolidado']);
     }
 
     /**

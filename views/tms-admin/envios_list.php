@@ -38,6 +38,17 @@ use yii\helpers\BaseHtml;
     ?>
 </select>
 
+<label for="almacen_destino">Almacen destino</label>
+<select name="almacen_destino">
+    <?php
+    foreach($almacenes as $item):
+    ?>
+        <option value="<?=$item->uddi?>"><?=$item->txt_nombre?></option>
+    <?php
+    endforeach;
+    ?>
+</select>
+
 <label for="nombre">Nombre del Consolidado</label>
 <input type="text" name="nombre">
 
@@ -45,7 +56,7 @@ use yii\helpers\BaseHtml;
 <h2>Envíos</h2>
 <?php
 foreach($shipments as $key=>$item):
-    if($item->idConsolidados){
+    if($item->id_consolidado){
         continue;
     }
     ?>
@@ -55,6 +66,8 @@ foreach($shipments as $key=>$item):
         <?=$item->id_envio?>
         <?=Html::a($item->uddi,['tms-admin/envio-detalles', 'uddi' => $item->uddi] )?>
         <strong><?=$item->idEnvioEstado->txt_nombre?></strong>
+        <?=$item->id_almacen?$item->idAlmacen->txt_nombre:''?>
+        [<?=$item->id_consolidado?$item->idConsolidado->txt_nombre:''?>]
         <?=$item->fch_creacion?>
     </div>
 
@@ -74,6 +87,8 @@ foreach($shipments as $key=>$item):
 <label for="action">Acción</label>
 <select name="action">
     <option value="close-consolidado">Consolidar</option>
+    <option value="transito-consolidado">Transito</option>
+    <option value="arribo-consolidado">Arribo</option>
 </select>
 
 <?= Html::submitButton('POST', ['class' => 'btn btn-primary']) ?>
@@ -90,6 +105,7 @@ foreach($consolidados as $key=>$item):
         <?=Html::a($item->uddi,['tms-admin/consolidado-detalles', 'uddi' => $item->uddi] )?>
         <?=$item->idTipoConsolidado->txt_nombre?>
         <strong><?=$item->idConsolidadoEstado->txt_nombre?></strong>
+        
         <?=$item->fch_creacion?>
         <ul>
             <?php
@@ -99,6 +115,10 @@ foreach($consolidados as $key=>$item):
             <li>
                 <?=$subitem->id_envio?>
                 <?=Html::a($subitem->uddi,['tms-admin/envio-detalles', 'uddi' => $subitem->uddi] )?>
+                <strong><?=$subitem->idEnvioEstado->txt_nombre?></strong>
+                <?=$subitem->id_almacen?$subitem->idAlmacen->txt_nombre:''?>
+                [<?=$subitem->id_consolidado?$subitem->idConsolidado->txt_nombre:''?>]
+                <?=$subitem->fch_creacion?>
             </li>
             <?php
                 endforeach
