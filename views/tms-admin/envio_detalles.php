@@ -11,6 +11,12 @@
         <?=$item->idEnvioEstado->txt_nombre?>
         <?=$item->fch_creacion?>
         <hr>
+        <ul>
+        <?foreach($item->relEnviosAtributos as $attr):?>
+            <li><?=$attr->idEnvioAtributo->txt_nombre?>: <?=$attr->txt_valor?></li>
+        <?endforeach;?>
+        </ul>
+        <hr>
         <div>
             <? print_r($direccionFrom);?>
         </div>
