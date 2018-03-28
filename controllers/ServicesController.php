@@ -16,6 +16,8 @@ use app\models\EntEnvios;
 use app\models\EntDirecciones;
 use app\models\Entplataformas;
 use app\models\WrkEnviosEventos;
+use app\models\RelEnviosAtributos;
+use app\models\CatEnviosAtributos;
 
 
 class ServicesController extends \yii\rest\Controller
@@ -112,8 +114,29 @@ class ServicesController extends \yii\rest\Controller
             return $validTo;
         }
        
-
+        //Validacion de atributios obligatorios
+        if(!$this->validateRequiredParam($error,isset($json->atributos), "atributos" )){
+            return $error;
+        }
         
+        
+        if(!$this->validateRequiredParam($error,isset($json->atributos->peso_gr), "Peso" )){
+            return $error;
+        }
+
+        if(!$this->validateRequiredParam($error,isset($json->atributos->ancho_cm), "Ancho" )){
+            return $error;
+        }
+
+        if(!$this->validateRequiredParam($error,isset($json->atributos->alto_cm), "Alto" )){
+            return $error;
+        }
+
+        if(!$this->validateRequiredParam($error,isset($json->atributos->largo_cm), "Largo" )){
+            return $error;
+        }
+        
+
 
         //Verifica que exista la plataforma
         $plataforma = EntPlataformas::find()->where(['uddi'=>$json->plataforma])->one();
@@ -172,8 +195,31 @@ class ServicesController extends \yii\rest\Controller
             }
             
             //Crea el evento
-            if(!self::addEnvioEvento($shipment, self::ENVIO_ESTADO_INFO_RECIBIDA, "")){
-                throw new \Exception("Error al generar el evento");
+            self::addEnvioEvento($shipment, self::ENVIO_ESTADO_INFO_RECIBIDA, "");
+
+            //Crea los atributos obligatorios
+            self::createAttributoEnvio($shipment->id_envio, self::ENVIO_ATTR_ALTO, $json->atributos->alto_cm);
+            self::createAttributoEnvio($shipment->id_envio, self::ENVIO_ATTR_ANCHO, $json->atributos->ancho_cm);
+            self::createAttributoEnvio($shipment->id_envio, self::ENVIO_ATTR_LARGO, $json->atributos->largo_cm);
+            self::createAttributoEnvio($shipment->id_envio, self::ENVIO_ATTR_PESO, $json->atributos->peso_gr);
+
+            //Crea los atributos opcionales
+            if(isset($json->atributos->opcionales)){
+                foreach($json->atributos->opcionales as $item){
+                    //verifica que tenga los elementos necesarios
+                    if(!isset($item->atributo) || !isset($item->valor)){
+                        //Salta el atributo por no tener los elementos completos
+                        continue;
+                    }
+                    //Busca si existe el atributo en la base de datos
+                    $attr = CatEnviosAtributos::find()->
+                    where(['txt_nombre'=>$item->atributo, 'b_habilitado'=>1])->
+                    one();
+                    //Si se encontró el atributo
+                    if($attr){
+                        self::createAttributoEnvio($shipment->id_envio, $attr->id_envio_atributo, $item->valor);
+                    }
+                }
             }
 
             $transaction->commit();
@@ -203,19 +249,56 @@ class ServicesController extends \yii\rest\Controller
         return $response;  
     }
 
+
     
 
+    const ENVIO_ATTR_ANCHO = 1;
+    const ENVIO_ATTR_ALTO = 2;
+    const ENVIO_ATTR_LARGO = 3;
+    CONST ENVIO_ATTR_PESO = 4;
+    
+
+    
+
+    //-------------------- UTILIDADES -----------------------------
+
+
+    /**
+     * Agrega el evento al envio
+     */
     private function addEnvioEvento($envio, $estatus, $notas){
         $evento = new WrkEnviosEventos();
         $evento->id_envio = $envio->id_envio;
         $evento->id_envio_estado = $estatus;
         $evento->txt_notas = $notas;
 
-        return($evento->save());
+        if(!$evento->save()){
+            throw new \Exception("Error al generar el evento");
+        }
     }
 
-    //-------------------- UTILIDADES -----------------------------
+
+    /**
+     * Crea un atributo y lo relaciona con el envio
+     */
+    private function createAttributoEnvio($idEnvio, $idAtributo, $valor){
+        //Crea los atributos obligatorios
+        
+        $relAttr = new RelEnviosAtributos();
+        $relAttr->id_envio = $idEnvio;
+        $relAttr->id_envio_atributo = $idAtributo;
+        $relAttr->txt_valor = $valor;
+        
+
+        if(!$relAttr->save()){
+            throw new \Exception("Error al generar el atributo ");
+        }
+    }
   
+
+    /**
+     * Crea una direccion de destino en la base de datos
+     */
     private function createAddress($data){
         $address = new EntDirecciones();
         $address->uddi = uniqid("addr-to");

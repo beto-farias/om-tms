@@ -510,12 +510,6 @@ class TmsAdminController extends Controller
             $rel->id_almacen = $idAlmacen;
             $rel->id_envio = $idEnvio;
             if(!$rel->save()){
-                print_r($idAlmacen);
-        print_r($idEnvio);
-        print_r($idEvento);
-        print_r(this->getModelErrorsAsString($rel->errors));
-        //print_r($evento->errors);
-        exit;
                 throw new \Exception(self::getModelErrorsAsString($rel->errors));
             }
         }
