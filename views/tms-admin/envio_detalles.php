@@ -19,6 +19,20 @@
         </div>
     </div>
 
+<hr>
+
+    <div>
+        <ul>
+        <?php foreach($details as $item):?>
+            <li>
+                <?=$item->id_evento?>
+                <?=$item->fch_evento?>
+                <strong><?=$item->txt_evento?></strong>
+                <?=$item->txt_lugar?>
+            </li>
+        <?php endforeach;?>
+        </ul>
+    </div>
 
     <?php
 

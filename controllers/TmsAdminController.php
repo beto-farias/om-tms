@@ -18,6 +18,7 @@ use app\models\WrkEnviosEventos;
 use app\models\EntAlmacenes;
 use app\models\WrkAlmacenesEventos;
 use app\models\RelEnviosAlmacenes;
+use app\models\VReporteEnvio;
 
 class TmsAdminController extends Controller
 {
@@ -53,7 +54,14 @@ class TmsAdminController extends Controller
      */
     public function actionEnvioDetalles($uddi){
          $shipment = EntEnvios::find()->where(['uddi'=>$uddi])->one();
-         return $this->render('envio_detalles',['shipment'=>$shipment]);
+         $details = VReporteEnvio::find()->
+         where(['id_envio'=>$shipment->id_envio])->
+         orderby('fch_evento')->
+         all();
+         return $this->render('envio_detalles',[
+             'shipment'=>$shipment,
+             'details'=>$details
+             ]);
     }
 
 
