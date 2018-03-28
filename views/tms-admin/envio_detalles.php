@@ -18,11 +18,31 @@
         </ul>
         <hr>
         <div>
-            <? print_r($direccionFrom);?>
+           
+            <?=$direccionFrom->uddi?>
+            <?=$direccionFrom->txt_calle?>
+            <?=$direccionFrom->txt_numero_exterior?>
+            <?=$direccionFrom->txt_numero_interior?>
+            <?=$direccionFrom->txt_colonia?>
+            <?=$direccionFrom->txt_municipio?>
+            <?=$direccionFrom->txt_estado?>
+            <?=$direccionFrom->txt_pais?>
+            <?=$direccionFrom->txt_cp?>
+            <?=$direccionFrom->txt_referencia?>
+            
         </div>
         <hr>
         <div>
-            <? print_r($direccionTo);?>
+            <?=$direccionTo->uddi?>
+            <?=$direccionTo->txt_calle?>
+            <?=$direccionTo->txt_numero_exterior?>
+            <?=$direccionTo->txt_numero_interior?>
+            <?=$direccionTo->txt_colonia?>
+            <?=$direccionTo->txt_municipio?>
+            <?=$direccionTo->txt_estado?>
+            <?=$direccionTo->txt_pais?>
+            <?=$direccionTo->txt_cp?>
+            <?=$direccionTo->txt_referencia?>
         </div>
     </div>
 
@@ -33,6 +53,7 @@
         <?php foreach($details as $item):?>
             <li>
                 <?=$item['id_evento']?>
+                [<?=$item['txt_tipo']?>]
                 <?=$item['fch_evento']?>
                 <strong><?=$item['txt_evento']?></strong>
                 <?=$item['txt_lugar']?>

@@ -301,11 +301,12 @@ class ServicesController extends \yii\rest\Controller
      */
     private function createAddress($data){
         $address = new EntDirecciones();
-        $address->uddi = uniqid("addr-to");
+        $address->uddi = uniqid("addr-");
         $address->txt_calle = $data->calle;
         $address->txt_numero_exterior = $data->num_ext;
         $address->txt_numero_interior = $data->num_int;
         $address->txt_colonia = $data->colonia;
+        $address->txt_municipio = $data->municipio;
         $address->txt_estado = $data->estado;
         $address->txt_pais = $data->pais; 
         $address->txt_cp = $data->cp;
@@ -333,6 +334,10 @@ class ServicesController extends \yii\rest\Controller
         }
 
         if(!$this->validateRequiredParam($error,isset($json->colonia), "Colonia" )){
+            return $error;
+        }
+
+        if(!$this->validateRequiredParam($error,isset($json->municipio), "Municipio" )){
             return $error;
         }
 

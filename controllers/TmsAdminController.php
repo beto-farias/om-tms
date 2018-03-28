@@ -20,6 +20,8 @@ use app\models\WrkAlmacenesEventos;
 use app\models\RelEnviosAlmacenes;
 use app\models\VReporteEnvio;
 use yii\db\Query;
+use app\models\EntCandados;
+use app\models\WrkEventosCandados;
 
 class TmsAdminController extends Controller
 {
@@ -31,9 +33,15 @@ class TmsAdminController extends Controller
 
     const ENVIO_ESTADO_ENTRADA_ALMACEN = 6;
     const ENVIO_ESTADO_SALIDA_ALMACEN = 5;
+    const ENVIO_ESTADO_AGERADO_CONSOLIDADO = 10;
+    const ENVIO_ESTADO_REMOVIDO_CONSOLIDADO = 11;
 
     const ALMACEN_EVENTO_ARRIBO = 1;
     const ALMACEN_EVENTO_SALIDA = 2;
+
+    const CANDADO_ESTADO_EN_PROCESO = 1;
+    const CANDADO_ESTADO_ENTREGADO = 2;
+    const CANDADO_ESTADO_PARCIAL = 3;
 
     /**
      * Displays homepage.
@@ -46,10 +54,13 @@ class TmsAdminController extends Controller
         $shipments = EntEnvios::find()->all();
         $consolidados = EntConsolidados::find()->all();
         $almacenes = EntAlmacenes::find()->all();
+        $candados = EntCandados::find()->all();
         return $this->render('envios_list',[
             'shipments'=>$shipments, 
             'consolidados'=>$consolidados,
-            'almacenes'=>$almacenes]);
+            'almacenes'=>$almacenes,
+            'candados'=>$candados,
+            ]);
     }
 
 
@@ -75,7 +86,7 @@ class TmsAdminController extends Controller
 
         //Crea el query final
         $query = (new yii\db\Query())->
-        select(['id_evento','id_envio','id_consolidado','id_almacen','txt_lugar','fch_evento','txt_evento'])->
+        select(['id_evento','id_envio','id_consolidado','id_almacen','txt_lugar','fch_evento','txt_evento','txt_tipo'])->
         from(['detalles'=>$queryEnvios->union($queryConsolidados)])->
         orderBy('fch_evento');
 
@@ -112,7 +123,15 @@ class TmsAdminController extends Controller
 
         }else if($accion == 'recibir-shipment'){
 
-            $this->recibirShipment();
+            $this->procesarRecibirShipment();
+
+        }else if($accion == 'new-candado'){
+
+            $this->procesarNuevoCandado();
+
+        }else if($accion == 'add-candado'){
+
+            $this->procesarAgregarCandado();
         }
     }
 
@@ -257,6 +276,9 @@ class TmsAdminController extends Controller
     }
 
 
+    /**
+     * El consolidado llego al destino
+     */
     private function arriboConsolidado(){
         $consolidados = $_POST['consolidado']; 
             //crea la transaccion
@@ -312,8 +334,57 @@ class TmsAdminController extends Controller
     }
 
 
+
     /**
-     * 
+     * Crear un nuevo candado
+     */
+    private function procesarNuevoCandado(){
+        $shipments = $_POST['shipment'];
+        
+
+        //TODO mover la funcion a una externa para swichear de acuerdo a la accion
+        $model = new EntCandados();
+        $model->uddi = uniqid("candado-");
+        $model->txt_nombre = Yii::$app->request->post()['nombre'];
+        $model->id_candado_estado = self::CANDADO_ESTADO_EN_PROCESO;
+        $model->num_cantidad_envio = 0;
+        
+        //crea la transaccion
+        $transaction = Yii::$app->db->beginTransaction(
+            Transaction::SERIALIZABLE
+        );
+
+        try {
+            if ($model->save()) {
+
+                //Crea el evento
+                //$this->createCandadoEvento($model->id_candado, self::CANDADO_ESTADO_EN_PROCESO);
+
+
+                //Relaciona los envios con el candado
+                foreach($shipments as $item){
+                    $shipment = $this->getEnvioByUDDI($item);
+                    $shipment->id_candado = $model->id_candado; //Asigna al envio el andado
+
+                    //Guarda la actualizacion
+                    if(!$shipment->save()){
+                        throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                    }
+                }
+                $transaction->commit();
+                return $this->redirect(['envios-list']);
+            } else{
+                throw new \Exception(self::getModelErrorsAsString($model->errors));
+            }
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            print_r($e);
+            return $this->redirect(['envios-list']);
+        }
+    }
+
+    /**
+     * Crear un nuevo consolidado
      */
     private function procesarNuevoConsolidado(){
         $shipments = $_POST['shipment'];
@@ -341,13 +412,8 @@ class TmsAdminController extends Controller
             if ($model->save()) {
 
                 //Crea el evento
-                $evento = new WrkConsolidadosEventos();
-                $evento->id_consolidado = $model->id_consolidado;
-                $evento->id_consolidado_estado = self::CONSOLIDADO_ESTADO_EN_PREPARACION;
-                if(!$evento->save()){
-                    throw new \Exception(self::getModelErrorsAsString($evento->errors));
-                }
-
+                $this->createConsolidadoEvento($model->id_consolidado, self::CONSOLIDADO_ESTADO_EN_PREPARACION);
+                
 
                 //Relaciona los envios con el consolidado
                 foreach($shipments as $item){
@@ -367,6 +433,9 @@ class TmsAdminController extends Controller
                         throw new \Exception(self::getModelErrorsAsString($rel->errors));
                     }
 
+                    //Crea el evento del envio
+                    $this->createEnvioEvento($shipment->id_envio, self::ENVIO_ESTADO_AGERADO_CONSOLIDADO);
+
                 }
                 $transaction->commit();
                 return $this->redirect(['envios-list']);
@@ -384,7 +453,7 @@ class TmsAdminController extends Controller
     /**
      * Recibir un envio ---
      */
-    private function recibirShipment(){
+    private function procesarRecibirShipment(){
         $shipments = $_POST['shipment'];
             $almacen = $_POST['almacen'];
             $almacen = $this->getAlmacenByUDDI($almacen);
@@ -428,6 +497,45 @@ class TmsAdminController extends Controller
             return $this->redirect(['envios-list']);
     }
 
+
+
+
+    /**
+     * Agrega los envios a un candado existente
+     */
+    private function procesarAgregarCandado(){
+        $shipments = $_POST['shipment'];
+        $candado = $_POST['candado'];
+        $candado = $this->getCandadoByUDDI($candado);
+
+        //crea la transaccion
+        $transaction = Yii::$app->db->beginTransaction(
+            Transaction::SERIALIZABLE
+        );
+        try{
+            //Relaciona los envios con el consolidado
+            foreach($shipments as $item){
+                $shipment = $this->getEnvioByUDDI($item);
+                $shipment->id_candado = $candado->id_candado; //Asigna al envio al candado
+
+                //Guarda la actualizacion
+                if(!$shipment->save()){
+                    throw new \Exception(self::getModelErrorsAsString($shipment->errors));
+                }
+            }
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            print_r($e);
+            return $this->redirect(['envios-list']);
+        }
+
+        $transaction->commit();
+        return $this->redirect(['envios-list']);
+    }
+
+
+
+
     /**
      * Agrega los envios a un consolidado
      */
@@ -457,6 +565,9 @@ class TmsAdminController extends Controller
                 if(!$rel->save()){
                     throw new \Exception(self::getModelErrorsAsString($rel->errors));
                 }
+
+                //Crea el evento del envio
+                $this->createEnvioEvento($shipment->id_envio, self::ENVIO_ESTADO_AGERADO_CONSOLIDADO);
             }
         } catch (\Exception $e) {
             $transaction->rollBack();
@@ -489,6 +600,19 @@ class TmsAdminController extends Controller
         $evento = new WrkEnviosEventos();
         $evento->id_envio = $idEnvio;
         $evento->id_envio_estado = $idEvento;
+        if(!$evento->save()){
+            throw new \Exception(self::getModelErrorsAsString($evento->errors));
+        }
+    }
+
+
+    /**
+     * Crea un evento para el candado
+     */
+    private function createCandadoEvento($idCandado, $idEvento){
+        $evento = new WrkEventosCandados();
+        $evento->id_candado = $idCandado;
+        $evento->id_candado_estado = $idEvento;
         if(!$evento->save()){
             throw new \Exception(self::getModelErrorsAsString($evento->errors));
         }
@@ -543,6 +667,10 @@ class TmsAdminController extends Controller
 
     private function getAlmacenByUDDI($uddi){
         return  EntAlmacenes::find()->where(['uddi'=>$uddi])->one();
+    }
+
+    private function getCandadoByUDDI($uddi){
+        return  EntCandados::find()->where(['uddi'=>$uddi])->one();
     }
 
     /**

@@ -15,6 +15,7 @@ use Yii;
  * @property string $fch_evento
  * @property string $txt_notas
  * @property string $txt_evento
+ * @property string $txt_tipo
  */
 class VReporteEnvio extends \yii\db\ActiveRecord
 {
@@ -36,6 +37,7 @@ class VReporteEnvio extends \yii\db\ActiveRecord
             [['fch_evento'], 'safe'],
             [['txt_lugar', 'txt_evento'], 'string', 'max' => 45],
             [['txt_notas'], 'string', 'max' => 100],
+            [['txt_tipo'], 'string', 'max' => 11],
         ];
     }
 
@@ -53,6 +55,7 @@ class VReporteEnvio extends \yii\db\ActiveRecord
             'fch_evento' => 'Fch Evento',
             'txt_notas' => 'Txt Notas',
             'txt_evento' => 'Txt Evento',
+            'txt_tipo' => 'Txt Tipo',
         ];
     }
 }

@@ -14,6 +14,7 @@ use Yii;
  * @property string $txt_numero_interior
  * @property string $txt_colonia
  * @property string $txt_estado
+ * @property string $txt_municipio
  * @property string $txt_pais
  * @property string $txt_cp
  * @property string $txt_referencia
@@ -37,8 +38,8 @@ class EntDirecciones extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['uddi', 'txt_calle', 'txt_numero_exterior', 'txt_colonia', 'txt_estado', 'txt_pais', 'txt_cp', 'txt_referencia'], 'required'],
-            [['uddi', 'txt_calle', 'txt_numero_exterior', 'txt_numero_interior', 'txt_colonia', 'txt_estado', 'txt_pais'], 'string', 'max' => 45],
+            [['uddi', 'txt_calle', 'txt_numero_exterior', 'txt_colonia', 'txt_estado', 'txt_municipio', 'txt_pais', 'txt_cp', 'txt_referencia'], 'required'],
+            [['uddi', 'txt_calle', 'txt_numero_exterior', 'txt_numero_interior', 'txt_colonia', 'txt_estado', 'txt_municipio', 'txt_pais'], 'string', 'max' => 45],
             [['txt_cp'], 'string', 'max' => 5],
             [['txt_referencia'], 'string', 'max' => 100],
         ];
@@ -57,6 +58,7 @@ class EntDirecciones extends \yii\db\ActiveRecord
             'txt_numero_interior' => 'Txt Numero Interior',
             'txt_colonia' => 'Txt Colonia',
             'txt_estado' => 'Txt Estado',
+            'txt_municipio' => 'Txt Municipio',
             'txt_pais' => 'Txt Pais',
             'txt_cp' => 'Txt Cp',
             'txt_referencia' => 'Txt Referencia',

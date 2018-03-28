@@ -13,7 +13,8 @@ use yii\helpers\BaseHtml;
     <option value="recibir-shipment">Recibir envio</option>
     <option value="new-consolidado">Nuevo consolidado</option>
     <option value="add-consolidado">Agregar a consolidado</option>
-    <option value="candado">Candado</option>
+    <option value="new-candado">Nuevo candado</option>
+    <option value="add-candado">Agregar a candado</option>
 </select>
 
 <label for="consolidado">Consolidado</label>
@@ -49,6 +50,17 @@ use yii\helpers\BaseHtml;
     ?>
 </select>
 
+<label for="candado">Candado</label>
+<select name="candado">
+    <?php
+    foreach($candados as $item):
+    ?>
+        <option value="<?=$item->uddi?>"><?=$item->txt_nombre?></option>
+    <?php
+    endforeach;
+    ?>
+</select>
+
 <label for="nombre">Nombre del Consolidado</label>
 <input type="text" name="nombre">
 
@@ -69,6 +81,7 @@ foreach($shipments as $key=>$item):
         <?=$item->id_almacen?$item->idAlmacen->txt_nombre:''?>
         [<?=$item->id_consolidado?$item->idConsolidado->txt_nombre:''?>]
         <?=$item->fch_creacion?>
+        {<?=$item->id_candado?$item->idCandado->txt_nombre:''?>}
     </div>
 
 
@@ -108,9 +121,7 @@ foreach($consolidados as $key=>$item):
         
         <?=$item->fch_creacion?>
         <ul>
-            <?php
-                foreach($item->idEnvios as $subitem):
-            ?>
+            <?foreach($item->idEnvios as $subitem):?>
 
             <li>
                 <?=$subitem->id_envio?>
@@ -119,10 +130,9 @@ foreach($consolidados as $key=>$item):
                 <?=$subitem->id_almacen?$subitem->idAlmacen->txt_nombre:''?>
                 [<?=$subitem->id_consolidado?$subitem->idConsolidado->txt_nombre:''?>]
                 <?=$subitem->fch_creacion?>
+                {<?=$subitem->id_candado?$subitem->idCandado->txt_nombre:''?>}
             </li>
-            <?php
-                endforeach
-            ?>
+            <?endforeach?>
         </ul>
     </div>
 
@@ -133,3 +143,29 @@ endforeach
 ?>
 
 <?=BaseHtml::endForm() ?>
+    
+
+<h2>Candados</h2>
+
+<?foreach($candados as $item):?>
+    <div>
+        <?=$item->txt_nombre?>
+        <?=$item->uddi?>
+        <?=$item->fch_creacion?>
+
+        <ul>
+            <?foreach($item->entEnvios as $subitem):?>
+
+            <li>
+                <?=$subitem->id_envio?>
+                <?=Html::a($subitem->uddi,['tms-admin/envio-detalles', 'uddi' => $subitem->uddi] )?>
+                <strong><?=$subitem->idEnvioEstado->txt_nombre?></strong>
+                <?=$subitem->id_almacen?$subitem->idAlmacen->txt_nombre:''?>
+                [<?=$subitem->id_consolidado?$subitem->idConsolidado->txt_nombre:''?>]
+                <?=$subitem->fch_creacion?>
+                {<?=$subitem->id_candado?$subitem->idCandado->txt_nombre:''?>}
+            </li>
+            <?endforeach?>
+        </ul>
+    </div>
+<?endforeach?>

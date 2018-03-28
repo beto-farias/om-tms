@@ -9,6 +9,7 @@ use Yii;
  *
  * @property integer $id_candado
  * @property integer $id_candado_estado
+ * @property string $uddi
  * @property string $txt_nombre
  * @property string $txt_descripcion
  * @property integer $num_cantidad_envio
@@ -34,10 +35,10 @@ class EntCandados extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['id_candado_estado', 'txt_nombre', 'num_cantidad_envio'], 'required'],
+            [['id_candado_estado', 'uddi', 'txt_nombre', 'num_cantidad_envio'], 'required'],
             [['id_candado_estado', 'num_cantidad_envio'], 'integer'],
             [['fch_creacion'], 'safe'],
-            [['txt_nombre'], 'string', 'max' => 45],
+            [['uddi', 'txt_nombre'], 'string', 'max' => 45],
             [['txt_descripcion'], 'string', 'max' => 200],
             [['id_candado_estado'], 'exist', 'skipOnError' => true, 'targetClass' => CatCandadosEstados::className(), 'targetAttribute' => ['id_candado_estado' => 'id_candado_estado']],
         ];
@@ -51,6 +52,7 @@ class EntCandados extends \yii\db\ActiveRecord
         return [
             'id_candado' => 'Id Candado',
             'id_candado_estado' => 'Id Candado Estado',
+            'uddi' => 'Uddi',
             'txt_nombre' => 'Txt Nombre',
             'txt_descripcion' => 'Txt Descripcion',
             'num_cantidad_envio' => 'Num Cantidad Envio',
@@ -79,6 +81,6 @@ class EntCandados extends \yii\db\ActiveRecord
      */
     public function getWrkEventosCandados()
     {
-        return $this->hasMany(WrkEventosCandados::className(), ['ent_candados_id_candado' => 'id_candado']);
+        return $this->hasMany(WrkEventosCandados::className(), ['id_candado' => 'id_candado']);
     }
 }
