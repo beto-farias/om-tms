@@ -289,8 +289,10 @@ class ServicesController extends \yii\rest\Controller
         $relAttr->id_envio_atributo = $idAtributo;
         $relAttr->txt_valor = $valor;
         
+        
 
         if(!$relAttr->save()){
+            //return $relAttr->errors;
             throw new \Exception("Error al generar el atributo ");
         }
     }
