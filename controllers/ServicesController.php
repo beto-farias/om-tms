@@ -292,7 +292,7 @@ class ServicesController extends \yii\rest\Controller
         
 
         if(!$relAttr->save()){
-            //return $relAttr->errors;
+            return $relAttr->errors;
             throw new \Exception("Error al generar el atributo ");
         }
     }
